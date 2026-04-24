@@ -68,17 +68,21 @@ var webhookConfigStringToType = map[string][]WebhookType{
 }
 
 type webhook struct {
-	url         string
-	areaNames   []geo.AreaName
-	typesWanted []WebhookType
-	headerMap   map[string]string
-	httpClient  *http.Client
+	url              string
+	areaNames        []geo.AreaName
+	excludeAreaNames []geo.AreaName
+	typesWanted      []WebhookType
+	headerMap        map[string]string
+	httpClient       *http.Client
 }
 
 func (wh *webhook) getPayload(collection webhookCollection) ([]byte, error) {
 	var totalCollection []webhookMessage
 
-	if len(wh.areaNames) == 0 {
+	includeAll := len(wh.areaNames) == 0
+	hasExcludes := len(wh.excludeAreaNames) > 0
+
+	if includeAll && !hasExcludes {
 		for _, whType := range wh.typesWanted {
 			totalCollection = append(
 				totalCollection,
@@ -88,7 +92,10 @@ func (wh *webhook) getPayload(collection webhookCollection) ([]byte, error) {
 	} else {
 		for _, whType := range wh.typesWanted {
 			for _, message := range collection[whType].Messages {
-				if geo.AreaMatchWithWildcards(message.Areas, wh.areaNames) {
+				if hasExcludes && geo.AreaMatchWithWildcards(message.Areas, wh.excludeAreaNames) {
+					continue
+				}
+				if includeAll || geo.AreaMatchWithWildcards(message.Areas, wh.areaNames) {
 					totalCollection = append(totalCollection, message)
 				}
 			}
@@ -174,10 +181,11 @@ func webhookFromConfigWebhook(configWh config.Webhook) (*webhook, error) {
 	}
 
 	return &webhook{
-		url:         urlStr,
-		typesWanted: typesWanted,
-		areaNames:   configWh.AreaNames,
-		httpClient:  &http.Client{},
-		headerMap:   configWh.HeaderMap,
+		url:              urlStr,
+		typesWanted:      typesWanted,
+		areaNames:        configWh.AreaNames,
+		excludeAreaNames: configWh.ExcludeAreaNames,
+		httpClient:       &http.Client{},
+		headerMap:        configWh.HeaderMap,
 	}, nil
 }

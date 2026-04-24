@@ -66,6 +66,7 @@ url = "http://localhost:4201"
 #url = "http://localhost:4202"
 #types = ["raid"]
 #areas = ["London/*", "*/Harrow", "Harrow"]
+#exclude_areas = ["Sydney", "Paris/*"]
 
 [tuning]
 max_pokemon_distance = 100  # Maximum distance in kilometers for searching pokemon
